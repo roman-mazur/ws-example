@@ -1,0 +1,103 @@
+<project name="ws-example" default="build" basedir=".."
+    xmlns:catalina="task:catalina"
+    >
+
+  <property name="build.home" value="${basedir}/build" />
+
+  <property name="output.home" value="${build.home}/output" />
+  <property name="output.temp" value="${output.home}/temp" />
+  <property name="output.classes" value="${output.temp}/classes" />
+  <property name="output.artifacts" value="${output.home}/artifacts" />
+  <property name="result.home" value="${output.home}/${ant.project.name}" />
+
+  <property name="lib.home" value="${basedir}/lib" />
+
+  <property name="src.main.java" value="${basedir}/src/main/java" />
+  <property name="src.main.web" value="${basedir}/src/main/web" />
+  <property name="src.gen.java" value="${output.temp}/gen/java" />
+  
+  <property file="${build.home}/build.properties" />
+  
+  <path id="compile.classpath">
+    <fileset dir="${lib.home}" includes="*.jar"/>
+  </path>
+
+  <target name="prepare">
+    <mkdir dir="${src.gen.java}"/>
+    <mkdir dir="${output.classes}"/>
+    <mkdir dir="${output.artifacts}"/>
+    <mkdir dir="${result.home}"/>
+  </target>
+  
+  <target name="clean">
+    <delete dir="${output.home}" />
+  </target>
+
+  <target name="gen-ws-artifacts">
+    <apt srcdir="${src.main.java}" destdir="${src.gen.java}"
+         preprocessdir="${src.gen.java}"
+         compile="false"
+         classpathref="compile.classpath" />
+    <copy todir="${src.gen.java}">
+      <fileset dir="${src.main.java}" />
+    </copy>
+  </target>
+  
+  <target name="compile" depends="prepare, gen-ws-artifacts">
+    <javac srcdir="${src.gen.java}" destdir="${output.classes}"
+           debug="true" optimize="true" deprecation="true"
+           source="1.6" target="1.6"
+           classpathref="compile.classpath"/>
+  </target>
+  
+  <target name="package" depends="compile">
+    <jar destfile="${output.artifacts}/${ant.project.name}.jar">
+      <fileset dir="${output.classes}" />
+    </jar>
+  </target>
+  
+  <target name="build" depends="package">
+    <copy todir="${result.home}">
+      <fileset dir="${src.main.web}" />
+    </copy>
+    <mkdir dir="${result.home}/WEB-INF/lib"/>
+    <copy todir="${result.home}/WEB-INF/lib">
+      <fileset dir="${output.artifacts}"/>
+      <fileset dir="${lib.home}"/>
+    </copy>
+    
+    <jar destfile="${output.artifacts}/${ant.project.name}.war">
+      <fileset dir="${result.home}" />
+    </jar>
+  </target>
+  
+  <target name="init-tomcat-tasks">
+    <echo>Loading catalina tasks...</echo>
+    <taskdef uri="task:catalina" resource="org/apache/catalina/ant/antlib.xml">
+      <classpath>
+        <fileset dir="${server.home}/lib" includes="*.jar" />
+      </classpath>
+    </taskdef>
+  </target>
+  
+  <target name="tomcat-deploy" depends="init-tomcat-tasks, build">
+    <catalina:deploy 
+        url="${server.manager.url}"
+        username="${server.manager.login}"
+        password="${server.manager.password}"
+        path="/${ant.project.name}"
+        update="true"
+        localWar="${output.artifacts}/${ant.project.name}.war"
+        />
+  </target>
+  <target name="tomcat-undeploy" depends="init-tomcat-tasks">
+    <catalina:undeploy 
+        url="${server.manager.url}"
+        username="${server.manager.login}"
+        password="${server.manager.password}"
+        path="/${ant.project.name}"
+        />
+  </target>
+  <target name="tomcat-redeploy" depends="tomcat-undeploy, tomcat-deploy" />
+  
+</project>
