@@ -16,11 +16,19 @@
   <property name="src.main.web" value="${basedir}/src/main/web" />
   <property name="src.gen.java" value="${output.temp}/gen/java" />
   
+  <property name="tools.home" value="${basedir}/tools" />
+
   <property file="${build.home}/build.properties" />
   
   <path id="compile.classpath">
     <fileset dir="${lib.home}" includes="*.jar"/>
   </path>
+
+  <taskdef name="wsimport" classname="com.sun.tools.ws.ant.WsImport">
+    <classpath>
+      <fileset dir="${tools.home}/ws" includes="*.jar"/>
+    </classpath>
+  </taskdef>
 
   <target name="prepare">
     <mkdir dir="${src.gen.java}"/>
@@ -99,5 +107,32 @@
         />
   </target>
   <target name="tomcat-redeploy" depends="tomcat-undeploy, tomcat-deploy" />
+  
+  <macrodef name="client">
+    <attribute name="service"/>
+    <sequential>
+      <mkdir dir="${output.temp}/client/java" />
+      <mkdir dir="${output.temp}/client/classes" />
+      <wsimport 
+          debug="true"
+          keep="true"
+          xendorsed="true"
+          wsdl="${server.url}/${ant.project.name}/@{service}?wsdl"
+          destdir="${output.temp}/client/classes" 
+          sourcedestdir="${output.temp}/client/java" 
+          />
+      <jar destfile="${output.artifacts}/${ant.project.name}-client-@{service}.jar">
+        <fileset dir="${output.temp}/client/classes" />
+      </jar>  
+      <jar destfile="${output.artifacts}/${ant.project.name}-client-@{service}-sources.jar">
+        <fileset dir="${output.temp}/client/java" />
+      </jar>  
+    </sequential>
+  </macrodef>
+  
+  <target name="gen-ws-client">
+    <client service="API"/>
+    <client service="Book"/>
+  </target>
   
 </project>
