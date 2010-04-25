@@ -135,4 +135,10 @@
     <client service="Book"/>
   </target>
   
+  <target name="release-sources" depends="clean">
+    <zip destfile="${ant.project.name}.zip">
+      <fileset dir="${basedir}" />
+    </zip>
+  </target>
+  
 </project>
